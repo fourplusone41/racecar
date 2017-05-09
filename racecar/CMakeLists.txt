@@ -85,6 +85,7 @@ catkin_package(
     urg_node
     joy
     joy_teleop
+    laser_scan_matcher
     rosbag
     rostopic
     rviz
