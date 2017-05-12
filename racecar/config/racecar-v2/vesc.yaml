@@ -14,7 +14,7 @@ vesc_to_odom/publish_tf: true
 wheelbase: .25
 
 vesc_driver:
-  port: /dev/ttyACM0
+  port: /dev/vesc
   duty_cycle_min: 0.0
   duty_cycle_max: 0.0
   current_min: 0.0

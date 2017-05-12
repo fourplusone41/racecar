@@ -6,11 +6,6 @@
 #   short_desc:     Short description (optional)
 
 subscribers:
-  - name:        "Safety"
-    topic:       "input/safety"
-    timeout:     0.2
-    priority:    15
-    short_desc:  "Input for safety monitor, highest priority"
   - name:        "Teleoperation"
     topic:       "input/teleop"
     timeout:     0.2
