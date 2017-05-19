@@ -12,5 +12,6 @@ int main(int argc, char** argv)
 
   ros::spin();
 
+  std::cout << "exiting" << std::endl;
   return 0;
 }
