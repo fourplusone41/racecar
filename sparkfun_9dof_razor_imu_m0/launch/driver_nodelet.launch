@@ -13,6 +13,7 @@
   <arg name="num_worker_threads" default="4" />
 
   <!-- driver parameters -->
+  <arg name="set_logger_level_debug" default="false" />
   <arg name="port" default="/dev/ttyUSB0" />
   
   <!-- Also globally disable bond heartbeat timeout in debug mode, so everything
@@ -28,6 +29,7 @@
   <!-- driver nodelet -->
   <node pkg="nodelet" type="nodelet" name="$(arg node_name)"
         args="load sparkfun_9dof_razor_imu_m0::DriverNodelet $(arg manager)" >
+    <param name="set_logger_level_debug" value="$(arg set_logger_level_debug)" />
     <param name="port" value="$(arg port)" />
   </node>    
 

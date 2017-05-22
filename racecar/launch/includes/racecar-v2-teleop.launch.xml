@@ -1,6 +1,7 @@
 <!-- -*- mode: XML -*- -->
 <launch>
   <arg name="racecar_version" default="racecar-v2" />
+  <arg name="imu_model" default="razor_imu_m0" />  
   <arg name="run_camera" default="false"/>
 
   <!-- joystick to ackermann command -->
@@ -28,6 +29,7 @@
   <!-- start imu and laser scanner -->
   <include file="$(find racecar)/launch/includes/common/sensors.launch.xml" >
     <arg name="racecar_version" value="$(arg racecar_version)" />
+    <arg name="imu_model" value="$(arg imu_model)" />    
   </include>
 
   <!-- static transforms, e.g. base_link to imu -->

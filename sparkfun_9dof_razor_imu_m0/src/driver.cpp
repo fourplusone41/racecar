@@ -10,8 +10,9 @@
 #include <sstream>
 #include <algorithm>
 
-#include <ros/console.h>
 #include <sensor_msgs/Imu.h>
+#include <geometry_msgs/Vector3Stamped.h>
+#include <ros/console.h>
 
 #define THROW(exceptionClass, message) throw exceptionClass(__FILE__, \
 							    __LINE__, (message) )
@@ -23,56 +24,52 @@ Driver::Driver(ros::NodeHandle nh,
 	       ros::NodeHandle private_nh) :
   serial_(std::string(), 115200, serial::Timeout::simpleTimeout(100),
 	  serial::eightbits, serial::parity_none, serial::stopbits_one, serial::flowcontrol_none),
-  rx_thread_run_(true), rate_(50), gyro_fsr_(500), accel_fsr_(2)
+  serial_thread_run_(true), frame_id_("imu"), rate_(50), gyro_fsr_(500), accel_fsr_(2)
 {
-  if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
-    ros::console::notifyLoggerLevelsChanged();
+  // set the logger level to debug from a parameter, e.g. settable from launch
+  bool set_log_debug(false);
+  if (private_nh.getParam("set_logger_level_debug", set_log_debug) && set_log_debug) {
+    if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
+      ros::console::notifyLoggerLevelsChanged();
+    }
   }
-
-  std::cout << "Initializing" << std::endl;
   ROS_DEBUG("Initializing sparkfun_9dof_razor_imu_m0::Driver");
-  
-  // get razor imu serial port address
-  std::string port;
-  if (!private_nh.getParam("port", port)) {
+
+  // imu serial port must be provided
+  if (!private_nh.getParam("port", port_)) {
     ROS_FATAL("SparkFun 9DoF Razor IMU M0 communication port parameter required.");
     ros::shutdown();
     return;
   }
 
-  // attempt to connect to the serial port
-  try {
-    serial_.setPort(port);
-    serial_.open();
-  }
-  catch (std::exception const& e) {
-    ROS_FATAL("Failed to connect to the SparkFun 9DoF Razor IMU M0, %s.", e.what());
+  // get IMU's coordinate frame id
+  private_nh.getParam("frame_id", frame_id_);
+  if (frame_id_.empty()) {
+    ROS_FATAL("SparkFun 9DoF Razor IMU M0 frame_id_ parameter must not be empty.");
     ros::shutdown();
     return;
   }
-
-  // create a publisher for the IMU data
+  
+  // create publishers for the IMU data
   imu_data_pub_ = nh.advertise<sensor_msgs::Imu>("/imu/data", 10);
-
-  // start up a serial receive monitoring thread
-  int result = pthread_create(&rx_thread_, NULL, &Driver::rxThreadHelper, this);
-  assert(0 == result);
+  imu_mag_pub_ = nh.advertise<geometry_msgs::Vector3Stamped>("/imu/mag", 10);
+  
+  // must start up a serial port worker thread
+  if (0 != pthread_create(&serial_thread_, NULL, &Driver::serialThreadHelper, this)) {
+    ROS_FATAL("Failed to create serial port worker thread.");
+    ros::shutdown();
+    return;
+  }
 }
 
 Driver::~Driver()
 {
-  std::cout << "Destructing" << std::endl;
   ROS_DEBUG("Destructing sparkfun_9dof_razor_imu_m0::Driver");
 
-  if (serial_.isOpen()) {
-    // bring down read thread
-    rx_thread_run_ = false;
-    int result = pthread_join(rx_thread_, NULL);
-    assert(0 == result);
-    std::cout << "Joined" << std::endl;
-    
-    serial_.close();
-  }
+  // trigger serial port worker thread to terminate
+  serial_thread_run_ = false;
+  int result = pthread_join(serial_thread_, NULL);
+  assert(0 == result);
 }
 
 std::vector<double> parseSensorMeasurement(std::string const& input)
@@ -100,9 +97,20 @@ bool isValidSensorMeasurement(std::vector<double> const& input)
   return input.size() > 0;
 }
   
-void* Driver::rxThread(void)
+void* Driver::serialThread(void)
 {
-  ROS_DEBUG("sparkfun_9dof_razor_imu_m0::Driver::rxThread starting.");
+  ROS_DEBUG("sparkfun_9dof_razor_imu_m0::Driver::serialThread starting.");
+
+  // attempt to connect to the serial port
+  try {
+    serial_.setPort(port_);
+    serial_.open();
+  }
+  catch (std::exception const& e) {
+    ROS_FATAL("Failed to connect to the SparkFun 9DoF Razor IMU M0, %s.", e.what());
+    ros::shutdown();
+    return NULL;
+  }
 
   // pause briefly to give serial port time to stabilize
   // not sure that this is necessary
@@ -111,49 +119,57 @@ void* Driver::rxThread(void)
   if (configureImu()) {
   
     std::vector<double> measurement;
-    while (rx_thread_run_) {
+    while (serial_thread_run_) {
       measurement = parseSensorMeasurement(boost::trim_copy(serial_.readline()));
       if (isValidSensorMeasurement(measurement)) {
 	if (measurement.size() == 14) {
 	  sensor_msgs::Imu::Ptr imu_msg(new sensor_msgs::Imu);
+	  geometry_msgs::Vector3Stamped::Ptr mag_msg(new geometry_msgs::Vector3Stamped);
 
+	  // set header
 	  imu_msg->header.stamp = ros::Time::now();
-	  imu_msg->header.frame_id = "imu";
+	  imu_msg->header.frame_id = frame_id_;
+	  mag_msg->header = imu_msg->header;
 	  
 	  // time
 	  // time = measurement[0]
-	  // acceleration
-	  imu_msg->linear_acceleration.x = measurement[1];
-	  imu_msg->linear_acceleration.y = measurement[2];
-	  imu_msg->linear_acceleration.z = measurement[3];
-	  // gyroscope
-	  imu_msg->angular_velocity.x = measurement[4];
-	  imu_msg->angular_velocity.y = measurement[5];
-	  imu_msg->angular_velocity.z = measurement[6];
-	  // magnetometer
-	  // mag.x = measurement[7]
-	  // mag.y = measurement[8]
-	  // msg.z = measurement[9]
+	  // acceleration in m/s^2
+	  imu_msg->linear_acceleration.x = 9.80665 * measurement[1];
+	  imu_msg->linear_acceleration.y = 9.80665 * measurement[2];
+	  imu_msg->linear_acceleration.z = 9.80665 * measurement[3];
+	  // gyroscope in rad/sec
+	  imu_msg->angular_velocity.x = M_PI * measurement[4] / 180.0;
+	  imu_msg->angular_velocity.y = M_PI * measurement[5] / 180.0;
+	  imu_msg->angular_velocity.z = M_PI * measurement[6] / 180.0;
+	  // magnetometer in Tesla
+	  // convert coordinate frame to match IMU
+	  mag_msg->vector.x = 1e-6 * measurement[8];
+	  mag_msg->vector.y = 1e-6 * measurement[7];
+	  mag_msg->vector.z = 1e-6 * -1 * measurement[9];
 	  // quaternion
 	  imu_msg->orientation.w = measurement[10];
-	  imu_msg->orientation.w = measurement[11];
-	  imu_msg->orientation.w = measurement[12];
-	  imu_msg->orientation.w = measurement[13];
+	  imu_msg->orientation.x = measurement[11];
+	  imu_msg->orientation.y = measurement[12];
+	  imu_msg->orientation.z = measurement[13];
 
 	  imu_data_pub_.publish(imu_msg);
+	  imu_mag_pub_.publish(mag_msg);
 	}
       }
     }
 
   }
 
+    
+  serial_.close();
+
   std::cout << "Thread terminating" << std::endl;
-  ROS_DEBUG("sparkfun_9dof_razor_imu_m0::Driver::rxThread terminating.");
+  ROS_DEBUG("sparkfun_9dof_razor_imu_m0::Driver::serialThread terminating.");
 }
 
 bool Driver::serialWriteVerify(std::string const& data)
 {
-  if (!rx_thread_run_)
+  if (!serial_thread_run_)
     return false;
 
   ROS_DEBUG_STREAM("Write: '" << data << "'");
@@ -189,7 +205,7 @@ bool Driver::sequentialCommand(std::string const& command, std::string const& re
     ros::WallTime expire(ros::WallTime::now() + ros::WallDuration(response_timeout));
     while(ros::WallTime::now() < expire) {
 
-      if (!rx_thread_run_)
+      if (!serial_thread_run_)
 	return false;
       std::string received = boost::trim_copy(serial_.readline());
 
@@ -219,7 +235,7 @@ bool Driver::togglePauseCommand(bool do_pause)
   ros::WallTime expire(ros::WallTime::now() + ros::WallDuration(std::max(3.0 / rate_, 0.1)));
   while(ros::WallTime::now() < expire) {
     
-      if (!rx_thread_run_)
+      if (!serial_thread_run_)
 	return false;
       if (isValidSensorMeasurement(parseSensorMeasurement(boost::trim_copy(serial_.readline())))) {
 	is_paused = false;
@@ -246,7 +262,7 @@ bool Driver::toggleSensorCommand(std::string const& command, bool turn_on, unsig
   ros::WallTime expire(ros::WallTime::now() + ros::WallDuration(std::max(3.0 / rate_, 0.1)));
   while(ros::WallTime::now() < expire) {
 
-    if (!rx_thread_run_)
+    if (!serial_thread_run_)
       return false;
     initial_measurement = parseSensorMeasurement(boost::trim_copy(serial_.readline()));
     
@@ -266,7 +282,7 @@ bool Driver::toggleSensorCommand(std::string const& command, bool turn_on, unsig
   expire = ros::WallTime::now() + ros::WallDuration(std::max(3.0 / rate_, 0.1));
   while(ros::WallTime::now() < expire) {
 
-    if (!rx_thread_run_)
+    if (!serial_thread_run_)
       return false;
     new_measurement = parseSensorMeasurement(boost::trim_copy(serial_.readline()));
 
@@ -302,7 +318,7 @@ bool Driver::toggleSensorCommand(std::string const& command, bool turn_on, unsig
   expire = ros::WallTime::now() + ros::WallDuration(std::max(3.0 / rate_, 0.1));
   while(ros::WallTime::now() < expire) {
 
-    if (!rx_thread_run_)
+    if (!serial_thread_run_)
       return false;
     new_measurement = parseSensorMeasurement(boost::trim_copy(serial_.readline()));
 
@@ -338,7 +354,7 @@ bool isSensorMeasurementEngineeringUnits(std::vector<double> const& input)
   
   bool is_engineering_units(false);
   for (std::vector<double>::const_iterator i(input.begin()); i != input.end(); i++) {
-    if (floorf(*i) != *i) {
+    if (floor(*i) != *i) {
       is_engineering_units = true;
     }
   }
@@ -352,7 +368,7 @@ bool Driver::toggleEngineeringUnitsCommand(bool turn_on)
   ros::WallTime expire(ros::WallTime::now() + ros::WallDuration(std::max(3.0 / rate_, 0.1)));
   while(ros::WallTime::now() < expire) {
 
-    if (!rx_thread_run_)
+    if (!serial_thread_run_)
       return false;
     measurement = parseSensorMeasurement(boost::trim_copy(serial_.readline()));
     
@@ -378,7 +394,7 @@ bool Driver::toggleEngineeringUnitsCommand(bool turn_on)
   expire = ros::WallTime::now() + ros::WallDuration(std::max(3.0 / rate_, 0.1));
   while(ros::WallTime::now() < expire) {
 
-    if (!rx_thread_run_)
+    if (!serial_thread_run_)
       return false;
     measurement = parseSensorMeasurement(boost::trim_copy(serial_.readline()));
     

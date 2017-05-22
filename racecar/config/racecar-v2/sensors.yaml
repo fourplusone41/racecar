@@ -4,3 +4,4 @@ laser_node:
 
 imu_node:
   port: /dev/imu
+  frame_id: base_imu_link

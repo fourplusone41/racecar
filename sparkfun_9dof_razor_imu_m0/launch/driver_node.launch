@@ -9,11 +9,13 @@
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
 
   <!-- driver parameters -->
+  <arg name="set_logger_level_debug" default="false" />
   <arg name="port" default="/dev/ttyUSB0" />
 
   <!-- driver node -->
   <node pkg="sparkfun_9dof_razor_imu_m0" type="driver_node" name="$(arg node_name)"
         output="screen" launch-prefix="$(arg launch_prefix)" >
+    <param name="set_logger_level_debug" value="$(arg set_logger_level_debug)" />
     <param name="port" value="$(arg port)" />
   </node>
 
