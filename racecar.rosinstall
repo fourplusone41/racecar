@@ -1,4 +1,4 @@
-- git: {local-name: src/racecar,               version: tech_ed_spring_2017,        uri: 'git@github.mit.edu:mitll-racecar/racecar.git'}
-- git: {local-name: src/vesc,                  version: tech_ed_spring_2017,        uri: 'git@github.mit.edu:mitll-racecar/vesc.git'}
-- git: {local-name: src/racecar-controllers,   version: tech_ed_spring_2017,        uri: 'git@github.mit.edu:mitll-racecar/racecar-controllers.git'}
-- git: {local-name: src/zed-ros-wrapper,       version: master,                     uri: 'https://github.com/stereolabs/zed-ros-wrapper.git'}
+- git: {local-name: racecar,               version: bwsi_2017,        uri: 'git@github.mit.edu:mitll-racecar/racecar.git'}
+- git: {local-name: vesc,                  version: bwsi_2017,        uri: 'git@github.mit.edu:mitll-racecar/vesc.git'}
+- git: {local-name: racecar-controllers,   version: bwsi_2017,        uri: 'git@github.mit.edu:mitll-racecar/racecar-controllers.git'}
+- git: {local-name: zed-ros-wrapper,       version: master,                     uri: 'https://github.com/stereolabs/zed-ros-wrapper.git'}
