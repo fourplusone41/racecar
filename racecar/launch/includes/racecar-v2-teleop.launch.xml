@@ -19,7 +19,9 @@
   </include>
 
   <!-- controllers -->
-  <include file="$(find racecar_controllers)/launch/controllers.launch" />
+  <include file="$(find racecar)/launch/includes/common/controllers.launch.xml">  
+    <arg name="racecar_version" value="$(arg racecar_version)" />
+  </include>
   
   <!-- start electronic speed controller driver -->
   <include file="$(find racecar)/launch/includes/$(arg racecar_version)/vesc.launch.xml" >
