@@ -4,6 +4,11 @@
   <arg name="imu_model" default="razor_imu_m0" />  
   <arg name="run_camera" default="false"/>
 
+  <!-- vehicle geometry parameters and static transforms -->
+  <include file="$(find racecar)/launch/includes/$(arg racecar_version)/vehicle_geometry.launch.xml">
+    <arg name="racecar_version" value="$(arg racecar_version)" />
+  </include>
+
   <!-- joystick to ackermann command -->
   <include file="$(find racecar)/launch/includes/common/joy_teleop.launch.xml" >
     <arg name="racecar_version" value="$(arg racecar_version)" />
@@ -33,8 +38,5 @@
     <arg name="racecar_version" value="$(arg racecar_version)" />
     <arg name="imu_model" value="$(arg imu_model)" />    
   </include>
-
-  <!-- static transforms, e.g. base_link to imu -->
-  <include file="$(find racecar)/launch/includes/$(arg racecar_version)/static_transforms.launch.xml" />
 
 </launch>

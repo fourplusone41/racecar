@@ -1,0 +1,4 @@
+# config file for vehicle geometry
+
+# car wheelbase is about 25cm 
+wheelbase: .25
