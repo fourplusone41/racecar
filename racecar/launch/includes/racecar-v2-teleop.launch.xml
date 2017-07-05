@@ -4,8 +4,8 @@
   <arg name="imu_model" default="razor_imu_m0" />  
   <arg name="run_camera" default="false"/>
 
-  <!-- vehicle geometry parameters and static transforms -->
-  <include file="$(find racecar)/launch/includes/$(arg racecar_version)/vehicle_geometry.launch.xml">
+  <!-- vehicle geometry parameters, footprint, and static transforms -->
+  <include file="$(find racecar)/launch/includes/common/vehicle_geometry.launch.xml">
     <arg name="racecar_version" value="$(arg racecar_version)" />
   </include>
 
