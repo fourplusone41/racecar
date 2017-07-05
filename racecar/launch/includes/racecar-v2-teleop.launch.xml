@@ -1,7 +1,7 @@
 <!-- -*- mode: XML -*- -->
 <launch>
   <arg name="racecar_version" value="racecar-v2" />
-  <arg name="imu_model" default="$(optenv RACECAR_IMU razor_imu_m0)" doc="imu sensor types [razor_imu, razor_imu_m0]" />
+  <arg name="imu_model" default="$(optenv RACECAR_IMU razor_imu)" doc="imu sensor types [razor_imu, razor_imu_m0]" />
   <arg name="run_camera" default="false"/>
 
   <!-- vehicle geometry parameters, footprint, and static transforms -->
