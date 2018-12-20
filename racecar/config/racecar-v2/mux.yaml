@@ -11,11 +11,13 @@ subscribers:
     timeout:     0.2
     priority:    10
     short_desc:  "Input for human teleoperation (joystick)"
+
   - name:        "Navigation"
     topic:       "input/navigation"
     timeout:     0.2
     priority:    5
     short_desc:  "Input for autonomous navigation"
+
   - name:        "Default"
     topic:       "input/default"
     timeout:     1.0
