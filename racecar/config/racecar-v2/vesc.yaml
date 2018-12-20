@@ -20,9 +20,6 @@ steering_angle_to_servo_offset: 0.5304
 vesc_to_odom:
   publish_tf: true
 
-# car wheelbase is 324mm 
-wheelbase: .324
-
 vesc_driver:
   port: /dev/vesc
   duty_cycle_min: 0.0
