@@ -1,6 +1,7 @@
 <!-- -*- mode: XML -*- -->
 <launch>
   
-  <node pkg="sparkfun_9dof_razor_imu_m0" type="driver_node" name="imu_node" />
+  <!--<node pkg="sparkfun_9dof_razor_imu_m0" type="driver_node" name="imu_node" />-->
+  <include file="$(find razor_imu_m0_driver)/launch/driver_node.launch"/>
   
 </launch>

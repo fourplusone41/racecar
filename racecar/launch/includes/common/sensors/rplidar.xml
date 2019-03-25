@@ -1,0 +1,6 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  
+  <include file="$(find rplidar_ros)/launch/rplidar.launch"/>
+  
+</launch>
