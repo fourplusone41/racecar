@@ -45,6 +45,7 @@
   <!-- start camera -->
   <group if="$(arg run_camera)">
     <include file="$(find zed_wrapper)/launch/zed.launch">
+      <arg name="camera_model"         value="0" />
       <arg name="resolution"           value="2" /> <!-- 0=RESOLUTION_HD2K, 1=RESOLUTION_HD1080, 2=RESOLUTION_HD720, 3=RESOLUTION_VGA -->
       <arg name="frame_rate"           value="60" /> <!-- available framerates for HD720: 15, 30, 60 fps -->
     </include>
@@ -52,8 +53,10 @@
 
   <!-- start robot localization -->
   <group if="$(arg run_localization)">
-    <node pkg="racecar" name="correct_odom" type="correct_odom.py" output="screen" />
-    <include file="$(find robot_localization)/launch/ekf_template.launch" />
+    <!--<node pkg="racecar" name="correct_odom" type="correct_odom.py" output="screen" />-->
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true">
+      <rosparam command="load" file="$(find racecar)/config/$(arg racecar_version)/ekf_loc.yaml"  />
+    </node>
   </group>
 
 </launch>
