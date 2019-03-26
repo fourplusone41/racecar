@@ -1,8 +1,10 @@
 <!-- -*- mode: XML -*- -->
 <launch>
   <arg name="racecar_version" value="racecar-v2" />
-  <arg name="imu_model" default="$(optenv RACECAR_IMU razor_imu)" doc="imu sensor types [razor_imu, razor_imu_m0]" />
-  <arg name="run_camera" default="false"/>
+  <arg name="imu_model" />
+  <arg name="lidar" />
+  <arg name="run_localization" />
+  <arg name="run_camera" />
 
   <!-- vehicle geometry parameters, footprint, and static transforms -->
   <include file="$(find racecar)/launch/includes/common/vehicle_geometry.launch.xml">
@@ -37,6 +39,24 @@
   <include file="$(find racecar)/launch/includes/common/sensors.launch.xml" >
     <arg name="racecar_version" value="$(arg racecar_version)" />
     <arg name="imu_model" value="$(arg imu_model)" />    
+    <arg name="lidar" value="$(arg lidar)" />
   </include>
+
+  <!-- start camera -->
+  <group if="$(arg run_camera)">
+    <include file="$(find zed_wrapper)/launch/zed.launch">
+      <arg name="camera_model"         value="0" />
+      <arg name="resolution"           value="2" /> <!-- 0=RESOLUTION_HD2K, 1=RESOLUTION_HD1080, 2=RESOLUTION_HD720, 3=RESOLUTION_VGA -->
+      <arg name="frame_rate"           value="60" /> <!-- available framerates for HD720: 15, 30, 60 fps -->
+    </include>
+  </group>
+
+  <!-- start robot localization -->
+  <group if="$(arg run_localization)">
+    <!--<node pkg="racecar" name="correct_odom" type="correct_odom.py" output="screen" />-->
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true">
+      <rosparam command="load" file="$(find racecar)/config/$(arg racecar_version)/ekf_loc.yaml"  />
+    </node>
+  </group>
 
 </launch>

@@ -1,0 +1,7 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+
+  <!-- <include file="$(find sweep_ros)/launch/sweep2scan.launch"/> -->
+  <include file="$(find sweep_ros)/launch/sweep_minified.launch"/>
+
+</launch>
